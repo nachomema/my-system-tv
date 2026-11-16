@@ -74,7 +74,7 @@ final class FutbolPanel {
         card.setCornerRadius(18 * density);
         card.setStroke(Math.max(1, Math.round(density)), 0x38FFFFFF);
         panel.setBackground(card);
-        panel.setPadding(dp(18), dp(9), dp(18), dp(10));
+        panel.setPadding(dp(18), dp(6), dp(18), dp(7));
     }
 
     /** Home is on screen (true) or not: the turns between a result and the next match only run while it shows. */
@@ -83,6 +83,12 @@ final class FutbolPanel {
         running = on;
         panel.removeCallbacks(rotate);
         if (on) panel.postDelayed(rotate, TURN_MS);
+    }
+
+    /** Fades the card out while the Control Center is open over it, and back in after. */
+    void fade(boolean in) {
+        panel.animate().cancel();
+        panel.animate().alpha(in ? 1f : 0f).setStartDelay(0).setDuration(in ? 220 : 160).start();
     }
 
     void hide() {
@@ -136,7 +142,7 @@ final class FutbolPanel {
         FrameLayout stage = new FrameLayout(ctx);
         LinearLayout.LayoutParams stageLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        stageLp.topMargin = dp(4);
+        stageLp.topMargin = dp(3);
         stageLp.setMarginStart(dp(12));
         col.addView(stage, stageLp);
 
@@ -167,11 +173,11 @@ final class FutbolPanel {
         s.addView(text(ctx, kicker(m), 9.5f, 0xD9FFFFFF, medium, 0.06f));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(3);
+        lp.topMargin = dp(2);
         s.addView(text(ctx, scoreLine(m), 13.5f, 0xFFFFFFFF, medium, 0f), lp);
         LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        metaLp.topMargin = dp(3);
+        metaLp.topMargin = dp(2);
         s.addView(text(ctx, meta(m), 9.5f, 0xB3FFFFFF, medium, 0.06f), metaLp);
         return s;
     }

@@ -1734,7 +1734,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
-        float y = dockTopInRoot - 14 * density - 26 * density - hero.getHeight();
+        // My System TV: 6dp lower than before, so the football card under the weather keeps a clear gap above the name.
+        float y = dockTopInRoot - 14 * density - 20 * density - hero.getHeight();
         boolean changed = !label.contentEquals(heroName.getText());
         if (cinematic) showHeroArt(position);
 
@@ -2684,6 +2685,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     static void panelOver() {
         MainActivity home = live.get();
         if (home != null && home.background != null && !home.isFinishing()) home.background.video.setAway(false);
+        // The Control Center's modules open over the football card's right end: the card steps aside meanwhile.
+        if (home != null && home.futbolPanel != null) home.futbolPanel.fade(false);
     }
 
     /** The Control Center is opening something (an app, Settings): the video stops now. */
@@ -2868,7 +2871,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void onContentRead() {
         if (isDestroyed() || appContent == null) return;
         boolean was = continueShown();
-        continueRow.setItems(appContent.continueWatching());
+        // config.xml continue_watching_row false: no Seguir viendo row under the dock at all.
+        continueRow.setItems(getResources().getBoolean(R.bool.continue_watching_row)
+                ? appContent.continueWatching() : new java.util.ArrayList<>());
         if (was != continueShown() || continueShown()) {
             grid.invalidateItemDecorations();
             grid.post(this::placeContinueRow);
@@ -2993,6 +2998,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         futbolPanel.setRunning(true);
+        futbolPanel.fade(true);
         futbol.update(blocks -> {
             if (isDestroyed()) return;
             // The setting may have been switched off while a read was on its way.

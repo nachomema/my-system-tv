@@ -349,6 +349,8 @@
     <!-- Header: Wi-Fi icon before a sentence-case greeting, the day name over the date, and a weather line. -->
     <bool name="modern_header">true</bool>
     <!-- Weather line under the clock, from Open-Meteo (no key; only these coordinates are sent), every 30 minutes. -->
+    <!-- The Seguir viendo row between the dock and the apps (every app's "Continue watching"). -->
+    <bool name="continue_watching_row">false</bool>
     <!-- Apps whose "Continue watching" stays out of the Seguir viendo row under the dock (package names). -->
     <string-array name="continue_watching_hidden" translatable="false">
         <item>com.amazon.amazonvideo.livingroom</item>
