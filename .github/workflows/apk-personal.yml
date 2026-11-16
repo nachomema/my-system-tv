@@ -1,0 +1,36 @@
+name: APK personal
+
+on:
+  push:
+    branches: [futbol, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build
+        working-directory: launcher
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../my-system-tv-futbol.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: my-system-tv-futbol
+          path: my-system-tv-futbol.apk
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ultima --yes --cleanup-tag || true
+          gh release create ultima my-system-tv-futbol.apk --target "$GITHUB_SHA" --title "Launcher con futbol" --notes "adb install -r my-system-tv-futbol.apk"
