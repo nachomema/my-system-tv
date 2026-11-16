@@ -346,6 +346,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             sky.update();
             if (skyClouds != null) skyClouds.setTint(sky.cloudColor(), sky.cloudAlpha());
             updateWeather();
+            updateFutbol();
             wallpaperPlayer.update();
             handler.postDelayed(this, MINUTE_MS);
         }
@@ -454,6 +455,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         dayName = findViewById(R.id.dayName);
         weatherView = findViewById(R.id.weather);
         if (modernHeader) setUpModernHeader(cfg);
+        // The football panel takes the header's fonts: the weather line's medium and the clock's light.
+        futbol = new Futbol(this);
+        futbolPanel = new FutbolPanel(findViewById(R.id.futbolPanel), weatherView.getTypeface(),
+                ((TextView) findViewById(R.id.clock)).getTypeface());
         if (getResources().getBoolean(R.bool.rtl_menu_bar)) {
             // Center Hebrew greetings over the numeric time, independent of a visible AM/PM label.
             findViewById(R.id.clock).addOnLayoutChangeListener((v, l, t, right, bottom, ol, ot, or, ob) -> {
@@ -934,6 +939,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         background.video.setAway(false);
         background.video.start();
         updateWeather();
+        updateFutbol();
         if (appContent != null) appContent.refresh(this::onContentRead);
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
@@ -2957,6 +2963,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         weather.update(line -> {
             weatherView.setText(line);
             weatherView.setVisibility(View.VISIBLE);
+        });
+    }
+
+    // ---- football panel (Futbol): the followed teams' live match, last result and next match ----
+
+    private Futbol futbol;
+    private FutbolPanel futbolPanel;
+
+    /** Once a minute and on each return to Home: the panel from the cache at once, fresh scores when due. */
+    private void updateFutbol() {
+        if (futbol == null || futbolPanel == null) return;
+        if (!Futbol.enabled(this)) {
+            futbolPanel.hide();
+            return;
+        }
+        futbol.update(blocks -> {
+            if (isDestroyed()) return;
+            // The setting may have been switched off while a read was on its way.
+            if (Futbol.enabled(this)) futbolPanel.render(blocks);
         });
     }
 

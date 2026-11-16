@@ -378,6 +378,20 @@
                     android:shadowRadius="6"
                     android:visibility="gone" />
 
+                <!-- Football panel (Futbol, FutbolPanel): one column per followed team, its live match, last
+                     result and next match. In leftBlock, so it fades with the clock for the showcase. -->
+                <LinearLayout
+                    android:id="@+id/futbolPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="22dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:focusable="false"
+                    android:importantForAccessibility="no"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
             <!-- Shown only when show_stats is on. Outside leftBlock, so the top buttons stay level with the clock
