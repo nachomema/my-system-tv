@@ -89,9 +89,14 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/greetingChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="28dp" />
+
+        <TextView
             android:id="@+id/futbolChoice"
             style="@style/SettingsRow"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="10dp"
             android:text="Fútbol: equipos y resultados" />
 
         <TextView

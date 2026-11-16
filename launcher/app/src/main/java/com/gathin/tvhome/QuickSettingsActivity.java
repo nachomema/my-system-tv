@@ -100,7 +100,7 @@ public final class QuickSettingsActivity extends Activity {
         // Where Bluetooth was (this TV has none): the football panel's teams (FutbolSettingsActivity).
         big("bt", 0, 2, R.drawable.ic_futbol, "Fútbol",
                 getString(Futbol.enabled(this) ? R.string.cc_on : R.string.cc_off),
-                new Intent(this, FutbolSettingsActivity.class));
+                new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_FUTBOL_SETTINGS));
         View fondo = pill("fondo", 2, 0, 2, R.drawable.ic_picture, getString(R.string.cc_fondo),
                 Fondos.current(this).name, null);
         fondo.setOnClickListener(v -> showPicker());

@@ -201,7 +201,7 @@
     <bool name="shamsi_date">false</bool>
 
     <!-- A name after the greeting: "Mr. Trịnh" shows GOOD MORNING, MR. TRỊNH. Empty: the greeting alone. -->
-    <string name="greeting_name" translatable="false"></string>
+    <string name="greeting_name" translatable="false">Pachu y Nacho</string>
     <!-- Optional VPN app the network pill opens (hold the pill for Wi-Fi settings), e.g. the package of the
          VPN you use. Empty: the pill opens Wi-Fi settings. The green VPN badge shows for any VPN either way;
          with an app set here, a red "VPN off" badge also shows while no VPN is up. -->
@@ -257,7 +257,7 @@
     <!-- Hold OK on a tile opens a small menu: Move (picks the tile up for reordering), Remove from Home (only with
          app_library) and App info. false keeps the old behaviour: holding OK opens the app's App info page.
          Can also be set with "tile_menu": true in a theme's config.json. -->
-    <bool name="tile_menu">false</bool>
+    <bool name="tile_menu">true</bool>
 
     <!-- Grid rows left visible under the dock on the home screen. 0 = dock sits at the very bottom. Tiles shrink if
          the dock, its title and this many rows would not otherwise fit the screen height. -->
@@ -371,7 +371,7 @@
     <!-- A light sweep across a tile when it takes focus. -->
     <bool name="focus_shine">true</bool>
     <!-- An "Inicio" tile first in the dock: focusing it shows the clean sky, with no app picture. -->
-    <bool name="home_tile">true</bool>
+    <bool name="home_tile">false</bool>
     <!-- Up from the dock to the top bar hides the dock and the rows below it, leaving a clean sky; Down brings
          them back. -->
     <bool name="clean_on_top_bar">true</bool>

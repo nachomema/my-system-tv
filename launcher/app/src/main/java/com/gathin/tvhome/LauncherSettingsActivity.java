@@ -27,6 +27,7 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
+    private TextView greetingChoice;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -94,6 +95,8 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(rowChoices);
             reverseRow(dockChoices);
         }
+        greetingChoice = findViewById(R.id.greetingChoice);
+        greetingChoice.setOnClickListener(v -> editGreetingName());
         findViewById(R.id.futbolChoice).setOnClickListener(v ->
                 startActivity(new Intent(this, FutbolSettingsActivity.class)));
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
@@ -144,6 +147,31 @@ public final class LauncherSettingsActivity extends Activity {
         refresh();
         if (config.launcherSettingsButton) reorderChoice.requestFocus();
         else columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
+    }
+
+    /** Saludo: the name said after "Buenas noches" on Home ("Pachu y Nacho"); empty says the greeting alone. */
+    private void editGreetingName() {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true);
+        input.setText(Config.load(this).greetingName);
+        input.setSelection(input.getText().length());
+        input.setHint("Pachu y Nacho");
+        int pad = Math.round(20 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(pad, pad / 2, pad, 0);
+        box.addView(input);
+        new AlertDialog.Builder(this)
+                .setTitle("Nombre en el saludo")
+                .setMessage("Aparece después de \"Buenas noches\" en la pantalla de inicio. Dejalo vacío para no mostrar ningún nombre.")
+                .setView(box)
+                .setPositiveButton("Guardar", (d, w) -> {
+                    choices.edit().putString(Config.GREETING_NAME_KEY, input.getText().toString().trim()).apply();
+                    changed();
+                    refresh();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+        input.requestFocus();
     }
 
     private void reverseRow(TextView[] views) {
@@ -235,6 +263,8 @@ public final class LauncherSettingsActivity extends Activity {
                         : wallpaperCurrent != null ? wallpaperCurrent
                         : getString(R.string.wallpaper_theme_default)));
         followThemeChoice.setSelected(!hasOnTvChoices());
+        String name = Config.load(this).greetingName;
+        greetingChoice.setText(name.isEmpty() ? "Saludo: sin nombre" : "Saludo: " + getString(R.string.good_night) + " " + name);
     }
 
     private boolean hasOnTvChoices() {

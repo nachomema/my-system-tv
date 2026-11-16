@@ -381,6 +381,23 @@
 
             </LinearLayout>
 
+            <!-- Football panel (Futbol, FutbolPanel): a glass card across the screen under the weather, one column
+                 per followed team, above the focused app's name. In the header, so it fades out for all apps. -->
+            <LinearLayout
+                android:id="@+id/futbolPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/leftBlock"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentEnd="true"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="-12dp"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
+                android:focusable="false"
+                android:importantForAccessibility="no"
+                android:visibility="gone" />
+
             <!-- Shown only when show_stats is on. Outside leftBlock, so the top buttons stay level with the clock
                  row; gone, it takes no space. -->
             <TextView
@@ -398,21 +415,6 @@
                 android:fontFamily="@string/font_medium"
                 android:letterSpacing="0.04"
                 android:focusable="false"
-                android:visibility="gone" />
-
-            <!-- Football panel (Futbol, FutbolPanel): a glass card at the top right, under the round buttons, one row
-                 per followed team. In the header, so it fades out with it for all apps. -->
-            <LinearLayout
-                android:id="@+id/futbolPanel"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/topButtons"
-                android:layout_alignParentEnd="true"
-                android:layout_marginTop="22dp"
-                android:layout_marginEnd="-8dp"
-                android:orientation="vertical"
-                android:focusable="false"
-                android:importantForAccessibility="no"
                 android:visibility="gone" />
 
             <LinearLayout

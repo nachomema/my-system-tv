@@ -102,6 +102,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
+    /** The Control Center's Fútbol module: opened through Home, like Launcher settings. */
+    static final String ACTION_FUTBOL_SETTINGS = "com.gathin.tvhome.action.FUTBOL_SETTINGS";
     /** The Control Center's "Arrange apps": Home turns reorder mode on. */
     static final String ACTION_REORDER = "com.gathin.tvhome.action.REORDER";
     /** The system input switcher, forwarded here by InputsRequestActivity while handle_view_inputs is on. */
@@ -833,6 +835,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private boolean openLauncherSettingsIfAsked(Intent intent) {
+        if (intent != null && ACTION_FUTBOL_SETTINGS.equals(intent.getAction())) {
+            setIntent(new Intent(Intent.ACTION_MAIN));
+            startActivity(new Intent(this, FutbolSettingsActivity.class));
+            return true;
+        }
         if (intent == null || !ACTION_LAUNCHER_SETTINGS.equals(intent.getAction())) return false;
         setIntent(new Intent(Intent.ACTION_MAIN));
         startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
@@ -1232,7 +1239,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (position >= 0 && position < adapter.appCount()
                     && !getPackageName().equals(adapter.packageAt(position))) {
                 if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-                    onTileLongPress(position, getCurrentFocus());
+                    showTileMenu(position, getCurrentFocus());
                 }
                 return true;
             }
@@ -1253,6 +1260,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     if (down) moveBy(code);
                     return true;
                 default:
+                    // The OK still held from the long press that picked the app up: its release is not a drop.
+                    if (ok && heldOkPickUp) {
+                        if (!down) heldOkPickUp = false;
+                        return true;
+                    }
                     if (ok || back) {
                         if (!down) drop();
                         return true;
@@ -1468,6 +1480,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Ends the mode and saves the order if it changed since the mode started. */
     private void endReorder() {
+        heldOkPickUp = false;
         if (!reordering) return;
         dockEditing = false;
         dockEditSlot = -1;
@@ -3616,6 +3629,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public void onTileLongPress(int position, View card) {
+        // Hold OK on an app: it is picked up at once, to move it along the rows or into the dock, without going
+        // through the Organizar button first. The remote's Menu key still opens the tile menu below.
+        if (reordering) return;
+        String key = adapter.keyAt(position);
+        String pkg = adapter.packageAt(position);
+        if (key == null || pkg == null || pkg.equals(getPackageName())) return;
+        if (position >= adapter.movableCount()) {
+            showTileMenu(position, card);
+            return;
+        }
+        if (!beginReorder()) return;
+        int at = adapter.positionOf(key);   // beginReorder can rebuild the tiles
+        if (at < 0) return;
+        focusTile(at);
+        pickUp(at);
+        heldOkPickUp = true;
+        Toast.makeText(this, "Movela con las flechas y soltala con OK. Atrás para terminar.", Toast.LENGTH_LONG).show();
+    }
+
+    /** A long press of OK just picked an app up; the release of that same press is ignored. */
+    private boolean heldOkPickUp;
+
+    /** The tile menu (Add to dock, Move, App info), from the remote's Menu key. */
+    private void showTileMenu(int position, View card) {
         if (reordering) return;
         String key = adapter.keyAt(position);
         String pkg = adapter.packageAt(position);

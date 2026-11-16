@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Draws the football panel at the top right, under the round buttons: a glass card like the pills with one row per team,
- * the team in bold (as the day name), then one match: the competition and its state over the score. A team with
- * a result and a next match shows them in turn, eight seconds each; a live match stays on screen.
+ * Draws the football panel under the weather line, across the screen: a glass card like the top pills with one
+ * column per team, the team in bold (as the day name), then one match: the competition and its round, the score,
+ * and the state with the day. A result and the next match take turns, eight seconds each; a live match stays.
  */
 final class FutbolPanel {
 
@@ -74,7 +74,7 @@ final class FutbolPanel {
         card.setCornerRadius(18 * density);
         card.setStroke(Math.max(1, Math.round(density)), 0x38FFFFFF);
         panel.setBackground(card);
-        panel.setPadding(dp(16), dp(11), dp(16), dp(12));
+        panel.setPadding(dp(18), dp(9), dp(18), dp(10));
     }
 
     /** Home is on screen (true) or not: the turns between a result and the next match only run while it shows. */
@@ -105,9 +105,8 @@ final class FutbolPanel {
         int nationals = 0;
         for (Futbol.Block b : blocks) if (b.team.national) nationals++;
         for (int i = 0; i < blocks.size(); i++) {
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            if (i > 0) lp.topMargin = dp(11);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.setMarginStart(dp(22));
             panel.addView(team(blocks.get(i), nationals > 1), lp);
         }
         panel.setVisibility(View.VISIBLE);
@@ -129,7 +128,7 @@ final class FutbolPanel {
         head.addView(bar, barLp);
         String title = block.team.national
                 ? (nameNationals ? "Selección " + block.team.name : "Selecciones nacionales") : block.team.name;
-        TextView name = text(ctx, title, 14, 0xFFFFFFFF, medium, 0.01f);
+        TextView name = text(ctx, title, 13.5f, 0xFFFFFFFF, medium, 0.01f);
         name.setTypeface(medium, Typeface.BOLD);
         head.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         col.addView(head);
@@ -137,7 +136,7 @@ final class FutbolPanel {
         FrameLayout stage = new FrameLayout(ctx);
         LinearLayout.LayoutParams stageLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        stageLp.topMargin = dp(5);
+        stageLp.topMargin = dp(4);
         stageLp.setMarginStart(dp(12));
         col.addView(stage, stageLp);
 
@@ -161,32 +160,41 @@ final class FutbolPanel {
         return col;
     }
 
+    /** Three lines: the competition and its round, the score, and the state with the day. */
     private View slide(Context ctx, Futbol.Match m) {
         LinearLayout s = new LinearLayout(ctx);
         s.setOrientation(LinearLayout.VERTICAL);
-        s.addView(text(ctx, kicker(m), 10, 0xD9FFFFFF, medium, 0.06f));
+        s.addView(text(ctx, kicker(m), 9.5f, 0xD9FFFFFF, medium, 0.06f));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.topMargin = dp(3);
-        s.addView(text(ctx, scoreLine(m), 14, 0xFFFFFFFF, medium, 0f), lp);
+        s.addView(text(ctx, scoreLine(m), 13.5f, 0xFFFFFFFF, medium, 0f), lp);
+        LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        metaLp.topMargin = dp(3);
+        s.addView(text(ctx, meta(m), 9.5f, 0xB3FFFFFF, medium, 0.06f), metaLp);
         return s;
     }
 
-    /** "LIGA PROFESIONAL · FINAL", "COPA LIBERTADORES · ● EN VIVO 71'", "MUNDIAL · HOY 21:00". */
-    private CharSequence kicker(Futbol.Match m) {
-        SpannableStringBuilder s = new SpannableStringBuilder(Futbol.competition(m).toUpperCase(Locale.ROOT));
-        s.append("  ·  ");
+    /** "LIGA PROFESIONAL · FECHA 14", "COPA LIBERTADORES · OCTAVOS DE FINAL (IDA)", "AMISTOSO INTERNACIONAL". */
+    private static CharSequence kicker(Futbol.Match m) {
+        String k = Futbol.competition(m);
+        if (m.round != null && !m.round.isEmpty()) k += "  ·  " + m.round;
+        return k.toUpperCase(Locale.ROOT);
+    }
+
+    /** "FINAL · SÁB 15/11", "● EN VIVO 71'", "HOY 21:00". */
+    private CharSequence meta(Futbol.Match m) {
+        SpannableStringBuilder s = new SpannableStringBuilder();
         String status = Futbol.status(m);
         if (m.live()) {
-            int start = s.length();
             s.append("● EN VIVO ").append(status == null ? "" : status.toUpperCase(Locale.ROOT));
-            s.setSpan(new ForegroundColorSpan(LIVE_RED), start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            s.setSpan(new ForegroundColorSpan(LIVE_RED), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         } else if (status != null) {
-            s.append(status.toUpperCase(Locale.ROOT));
+            s.append(status.toUpperCase(Locale.ROOT)).append("  ·  ").append(Futbol.playedOn(m).toUpperCase(Locale.ROOT));
         } else {
-            int start = s.length();
             s.append(Futbol.when(m, is24h).toUpperCase(Locale.ROOT));
-            s.setSpan(new ForegroundColorSpan(CELESTE), start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            s.setSpan(new ForegroundColorSpan(CELESTE), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return s;
     }
@@ -224,7 +232,7 @@ final class FutbolPanel {
         for (Futbol.Block block : blocks) {
             b.append(block.team.id).append(block.team.name).append('|');
             for (Futbol.Match m : block.matches) {
-                b.append(m.id).append(m.state).append(m.statusName).append(m.clock)
+                b.append(m.id).append(m.round).append(m.state).append(m.statusName).append(m.clock)
                         .append(m.homeScore).append('-').append(m.awayScore).append(m.date).append(';');
             }
         }

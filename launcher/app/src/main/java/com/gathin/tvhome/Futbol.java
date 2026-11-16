@@ -77,6 +77,13 @@ final class Futbol {
         String statusName = "";
         String clock = "";
         String detail = "";
+        /** ESPN's note on the match, such as "CONMEBOL Libertadores, Round of 16, 1st Leg". */
+        String note = "";
+        /** ESPN's season type, which for cups often names the stage. */
+        String seasonType = "";
+        String seasonTypeId = "";
+        /** "Fecha 14", "Octavos de final (ida)": filled in by Futbol from the note or the schedule. */
+        String round = "";
 
         boolean live() {
             return "in".equals(state);
@@ -270,6 +277,7 @@ final class Futbol {
         List<Match> list = new ArrayList<>(byId.values());
         list.removeIf(m -> m.date == null);
         Collections.sort(list, (a, b) -> a.date.compareTo(b.date));
+        setRounds(list);
         return list;
     }
 
@@ -340,6 +348,11 @@ final class Futbol {
             JSONObject league = ev.optJSONObject("league");
             m.leagueSlug = league != null ? league.optString("slug", "") : "";
             m.leagueName = league != null ? league.optString("name", "") : "";
+            JSONObject st = ev.optJSONObject("seasonType");
+            if (st != null) {
+                m.seasonType = st.optString("name", "");
+                m.seasonTypeId = st.optString("id", "") + ":" + st.optString("type", "");
+            }
             if (m.leagueSlug.isEmpty() && slug != null) m.leagueSlug = slug;
             if (m.leagueName.isEmpty() && name != null) m.leagueName = name;
             JSONArray comps = ev.optJSONArray("competitions");
@@ -356,6 +369,13 @@ final class Futbol {
             }
             if (comp != null) {
                 if (m.date == null) m.date = parseDate(comp.optString("date", null));
+                JSONArray notes = comp.optJSONArray("notes");
+                if (notes != null) {
+                    for (int i = 0; i < notes.length() && m.note.isEmpty(); i++) {
+                        JSONObject n = notes.optJSONObject(i);
+                        if (n != null) m.note = n.optString("headline", "").trim();
+                    }
+                }
                 JSONArray teams = comp.optJSONArray("competitors");
                 if (teams != null) {
                     for (int i = 0; i < teams.length(); i++) {
@@ -438,6 +458,81 @@ final class Futbol {
         } finally {
             if (c != null) c.disconnect();
         }
+    }
+
+    // ---- the round: "Fecha 14", "Octavos de final (ida)" ------------------------------------------------------------
+
+    /**
+     * Names each match's round. A cup stage comes from ESPN's note or season type (translated); a league match gets
+     * "Fecha N", its place among the team's matches of that league and season, which is the matchday unless a match
+     * was moved.
+     */
+    static void setRounds(List<Match> sortedByDate) {
+        Map<String, Integer> count = new HashMap<>();
+        for (Match m : sortedByDate) {
+            String stage = stage(m.note);
+            if (stage.isEmpty()) stage = stage(m.seasonType);
+            if (stage.isEmpty() && isLeague(m.leagueSlug)) {
+                if (m.statusName.contains("POSTPONED") || m.statusName.contains("CANCEL")) continue;
+                String key = m.leagueSlug + "|" + m.seasonTypeId;
+                int n = count.getOrDefault(key, 0) + 1;
+                count.put(key, n);
+                stage = "Fecha " + n;
+            }
+            m.round = stage;
+        }
+    }
+
+    /** A league (fixed matchdays): Liga Profesional, Primera Nacional, the European leagues, the qualifiers. */
+    static boolean isLeague(String slug) {
+        if (slug == null) return false;
+        String s = slug.toLowerCase(Locale.ROOT);
+        if (s.startsWith("fifa.worldq")) return true;
+        return s.matches("[a-z]{3}\\.[0-9]");
+    }
+
+    /** ESPN's stage words in Spanish; "" when the text names no stage (a plain season name, say). */
+    static String stage(String text) {
+        if (text == null || text.isEmpty()) return "";
+        String t = text.toLowerCase(Locale.ROOT);
+        String leg = "";
+        if (t.contains("1st leg") || t.contains("first leg") || t.contains(" ida")) leg = " (ida)";
+        else if (t.contains("2nd leg") || t.contains("second leg") || t.contains("vuelta")) leg = " (vuelta)";
+        String stage;
+        if (t.contains("round of 32") || t.contains("dieciseisavos") || t.contains("16avos")) stage = "16avos de final";
+        else if (t.contains("round of 16") || t.contains("octavos")) stage = "Octavos de final";
+        else if (t.contains("quarter") || t.contains("cuartos")) stage = "Cuartos de final";
+        else if (t.contains("semi")) stage = "Semifinal";
+        else if (t.contains("third place") || t.contains("tercer puesto")) stage = "Tercer puesto";
+        else if (t.contains("final")) stage = "Final";
+        else if (t.contains("group") || t.contains("grupo")) stage = "Fase de grupos";
+        else if (t.contains("knockout round play") || t.contains("playoff") || t.contains("play-off")) stage = "Playoffs";
+        else if (t.contains("preliminary") || t.contains("qualifying round") || t.contains("fase previa")) stage = "Fase previa";
+        else {
+            java.util.regex.Matcher md = java.util.regex.Pattern
+                    .compile("(matchday|jornada|fecha|week|semana)\\s*(\\d+)").matcher(t);
+            if (md.find()) return "Fecha " + md.group(2);
+            return "";
+        }
+        // A group stage keeps its matchday when ESPN gives it: "Fase de grupos · Fecha 3".
+        java.util.regex.Matcher md = java.util.regex.Pattern
+                .compile("(matchday|jornada|fecha)\\s*(\\d+)").matcher(t);
+        if (stage.equals("Fase de grupos") && md.find()) return stage + " · Fecha " + md.group(2);
+        return stage + leg;
+    }
+
+    /** "Sáb 15/11", "Hoy", "Ayer": the day a match was played, in the TV's time zone. */
+    static String playedOn(Match m) {
+        if (m.date == null) return "";
+        ZoneId zone = ZoneId.systemDefault();
+        java.time.LocalDate day = m.date.atZone(zone).toLocalDate();
+        java.time.LocalDate today = java.time.LocalDate.now(zone);
+        if (day.equals(today)) return "Hoy";
+        if (day.equals(today.minusDays(1))) return "Ayer";
+        Locale es = new Locale("es", "AR");
+        String name = day.format(DateTimeFormatter.ofPattern("EEE", es)).replace(".", "");
+        if (!name.isEmpty()) name = name.substring(0, 1).toUpperCase(es) + name.substring(1);
+        return name + " " + day.format(DateTimeFormatter.ofPattern("d/M", es));
     }
 
     // ---- words ---------------------------------------------------------------------------------------------------
