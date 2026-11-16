@@ -95,6 +95,10 @@ final class AppContent {
             readPreview(fresh, recs, channels, report);
             // Most recent first, as the stock row orders it.
             Collections.sort(cw, (a, b) -> Long.compare(b.lastEngaged, a.lastEngaged));
+            // config.xml continue_watching_hidden: apps left out of "Seguir viendo" (Prime Video here).
+            java.util.Set<String> hidden = new java.util.HashSet<>(java.util.Arrays.asList(
+                    ctx.getResources().getStringArray(R.array.continue_watching_hidden)));
+            cw.removeIf(i -> hidden.contains(i.pkg));
             writeReport(cw, report);
             main.post(() -> {
                 byPackage = fresh;

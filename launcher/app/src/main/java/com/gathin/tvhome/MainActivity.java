@@ -1112,6 +1112,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Control Center over Home plays it again (panelOver).
         background.video.setAway(true);
         root.removeCallbacks(showIdleClock);
+        if (futbolPanel != null) futbolPanel.setRunning(false);
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
         if (skyClouds != null) skyClouds.stop();
@@ -2978,6 +2979,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             futbolPanel.hide();
             return;
         }
+        futbolPanel.setRunning(true);
         futbol.update(blocks -> {
             if (isDestroyed()) return;
             // The setting may have been switched off while a read was on its way.

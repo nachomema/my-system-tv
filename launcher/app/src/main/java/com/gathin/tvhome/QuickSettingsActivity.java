@@ -95,12 +95,12 @@ public final class QuickSettingsActivity extends Activity {
         panel.removeAllViews();
         items.clear();
 
-        Boolean bt = bluetoothOn();
         big("wifi", 0, 0, R.drawable.ic_wifi, getString(R.string.wifi), wifiStatus(),
                 SystemSettings.intent(this, Settings.ACTION_WIFI_SETTINGS));
-        big("bt", 0, 2, R.drawable.ic_bluetooth, getString(R.string.quick_bluetooth),
-                bt == null ? getString(R.string.settings) : getString(bt ? R.string.cc_on : R.string.cc_off),
-                SystemSettings.intent(this, Settings.ACTION_BLUETOOTH_SETTINGS));
+        // Where Bluetooth was (this TV has none): the football panel's teams (FutbolSettingsActivity).
+        big("bt", 0, 2, R.drawable.ic_futbol, "Fútbol",
+                getString(Futbol.enabled(this) ? R.string.cc_on : R.string.cc_off),
+                new Intent(this, FutbolSettingsActivity.class));
         View fondo = pill("fondo", 2, 0, 2, R.drawable.ic_picture, getString(R.string.cc_fondo),
                 Fondos.current(this).name, null);
         fondo.setOnClickListener(v -> showPicker());

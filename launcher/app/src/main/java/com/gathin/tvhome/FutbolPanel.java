@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -9,29 +10,56 @@ import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Draws the football panel under the header's weather line: one column per team, each with the team's name and
- * up to two matches (the competition and the state over the score). Plain text views, rebuilt when the data
- * changes (at most once a minute), never animated.
+ * Draws the football panel at the top right, under the round buttons: a glass card like the pills with one row per team,
+ * the team in bold (as the day name), then one match: the competition and its state over the score. A team with
+ * a result and a next match shows them in turn, eight seconds each; a live match stays on screen.
  */
 final class FutbolPanel {
 
-    private static final int LIVE_RED = 0xFFFF3B2F;
+    private static final int LIVE_RED = 0xFFFF4B3E;
     private static final int CELESTE = 0xFF75AADB;
+    private static final long TURN_MS = 8000L;
 
     private final LinearLayout panel;
     private final Typeface medium;
     private final Typeface light;
     private final float density;
     private final boolean is24h;
+    /** Each team's match views, shown one at a time. */
+    private final List<View[]> slides = new ArrayList<>();
+    private int turn;
+    private boolean running;
     /** What is on screen, so an unchanged minute rebuilds nothing. */
     private String shown = "";
+
+    private final Runnable rotate = new Runnable() {
+        @Override
+        public void run() {
+            if (!running) return;
+            turn++;
+            for (View[] s : slides) {
+                if (s.length < 2) continue;
+                View out = s[(turn - 1) % s.length];
+                View in = s[turn % s.length];
+                out.animate().cancel();
+                out.animate().alpha(0f).setStartDelay(0).setDuration(250).withEndAction(() -> out.setVisibility(View.INVISIBLE)).start();
+                in.animate().cancel();
+                in.setAlpha(0f);
+                in.setVisibility(View.VISIBLE);
+                in.animate().alpha(1f).setStartDelay(200).setDuration(300).start();
+            }
+            panel.postDelayed(this, TURN_MS);
+        }
+    };
 
     FutbolPanel(LinearLayout panel, Typeface medium, Typeface light) {
         this.panel = panel;
@@ -40,11 +68,27 @@ final class FutbolPanel {
         Context ctx = panel.getContext();
         this.density = ctx.getResources().getDisplayMetrics().density;
         this.is24h = android.text.format.DateFormat.is24HourFormat(ctx);
+        // The same glass as the top pills (pill_bg: Entradas, Ethernet, Ajustes), with their corners.
+        GradientDrawable card = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x2EFFFFFF, 0x14FFFFFF});
+        card.setCornerRadius(18 * density);
+        card.setStroke(Math.max(1, Math.round(density)), 0x38FFFFFF);
+        panel.setBackground(card);
+        panel.setPadding(dp(16), dp(11), dp(16), dp(12));
+    }
+
+    /** Home is on screen (true) or not: the turns between a result and the next match only run while it shows. */
+    void setRunning(boolean on) {
+        if (running == on) return;
+        running = on;
+        panel.removeCallbacks(rotate);
+        if (on) panel.postDelayed(rotate, TURN_MS);
     }
 
     void hide() {
         panel.setVisibility(View.GONE);
         panel.removeAllViews();
+        slides.clear();
         shown = "";
     }
 
@@ -57,55 +101,75 @@ final class FutbolPanel {
         if (key.equals(shown) && panel.getVisibility() == View.VISIBLE) return;
         shown = key;
         panel.removeAllViews();
+        slides.clear();
+        int nationals = 0;
+        for (Futbol.Block b : blocks) if (b.team.national) nationals++;
         for (int i = 0; i < blocks.size(); i++) {
-            View column = column(blocks.get(i));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            if (i > 0) lp.setMarginStart(dp(22));
-            panel.addView(column, lp);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (i > 0) lp.topMargin = dp(11);
+            panel.addView(team(blocks.get(i), nationals > 1), lp);
         }
         panel.setVisibility(View.VISIBLE);
     }
 
-    private View column(Futbol.Block block) {
+    private View team(Futbol.Block block, boolean nameNationals) {
         Context ctx = panel.getContext();
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
 
-        // The team's name after a short bar: celeste for a national team.
+        // The team in bold, as the day name over the date; a short bar before it, celeste for a national team.
         LinearLayout head = new LinearLayout(ctx);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
         View bar = new View(ctx);
-        bar.setBackgroundColor(block.team.national ? CELESTE : 0xCCFFFFFF);
+        bar.setBackgroundColor(block.team.national ? CELESTE : 0xE6FFFFFF);
         LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dp(3), dp(12));
-        barLp.setMarginEnd(dp(8));
+        barLp.setMarginEnd(dp(9));
         head.addView(bar, barLp);
-        TextView name = text(ctx, block.team.national
-                ? "Selecciones nacionales · " + block.team.name : block.team.name, 12, 0xD9FFFFFF, medium);
-        name.setAllCaps(true);
-        name.setLetterSpacing(0.16f);
+        String title = block.team.national
+                ? (nameNationals ? "Selección " + block.team.name : "Selecciones nacionales") : block.team.name;
+        TextView name = text(ctx, title, 14, 0xFFFFFFFF, medium, 0.01f);
+        name.setTypeface(medium, Typeface.BOLD);
         head.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         col.addView(head);
 
-        if (block.matches.isEmpty()) {
-            TextView none = text(ctx, "Sin partidos por ahora", 14, 0x99FFFFFF, light);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.topMargin = dp(8);
-            col.addView(none, lp);
+        FrameLayout stage = new FrameLayout(ctx);
+        LinearLayout.LayoutParams stageLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        stageLp.topMargin = dp(5);
+        stageLp.setMarginStart(dp(12));
+        col.addView(stage, stageLp);
+
+        List<Futbol.Match> matches = block.matches;
+        if (matches.isEmpty()) {
+            stage.addView(text(ctx, "Sin partidos por ahora", 12, 0xB3FFFFFF, light, 0.01f));
             return col;
         }
-        for (Futbol.Match m : block.matches) {
-            LinearLayout.LayoutParams compLp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            compLp.topMargin = dp(9);
-            col.addView(text(ctx, kicker(m), 10, 0xA6FFFFFF, medium, 0.12f), compLp);
-            LinearLayout.LayoutParams scoreLp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            scoreLp.topMargin = dp(2);
-            col.addView(text(ctx, scoreLine(m), 16, 0xFFFFFFFF, light), scoreLp);
+        // A live match stays put; otherwise the last result and the next match take turns.
+        int count = matches.get(0).live() ? 1 : matches.size();
+        View[] views = new View[count];
+        for (int i = 0; i < count; i++) {
+            View slide = slide(ctx, matches.get(i));
+            boolean on = i == turn % count;
+            slide.setVisibility(on ? View.VISIBLE : View.INVISIBLE);
+            stage.addView(slide, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT));
+            views[i] = slide;
         }
+        slides.add(views);
         return col;
+    }
+
+    private View slide(Context ctx, Futbol.Match m) {
+        LinearLayout s = new LinearLayout(ctx);
+        s.setOrientation(LinearLayout.VERTICAL);
+        s.addView(text(ctx, kicker(m), 10, 0xD9FFFFFF, medium, 0.06f));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(3);
+        s.addView(text(ctx, scoreLine(m), 14, 0xFFFFFFFF, medium, 0f), lp);
+        return s;
     }
 
     /** "LIGA PROFESIONAL · FINAL", "COPA LIBERTADORES · ● EN VIVO 71'", "MUNDIAL · HOY 21:00". */
@@ -122,20 +186,16 @@ final class FutbolPanel {
         } else {
             int start = s.length();
             s.append(Futbol.when(m, is24h).toUpperCase(Locale.ROOT));
-            s.setSpan(new ForegroundColorSpan(0xFFFFFFFF), start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            s.setSpan(new ForegroundColorSpan(CELESTE), start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return s;
     }
 
-    /** "Talleres 1 – 0 Belgrano", or "Talleres vs. Fortaleza" before kick-off. */
+    /** "Talleres  1 – 1  Estudiantes", or "Atlético-MG vs. Boca Juniors" before kick-off. */
     private static CharSequence scoreLine(Futbol.Match m) {
         boolean scored = (m.live() || m.done()) && !m.homeScore.isEmpty() && !m.awayScore.isEmpty();
         if (!scored) return m.home + " vs. " + m.away;
         return m.home + "  " + m.homeScore + " – " + m.awayScore + "  " + m.away;
-    }
-
-    private TextView text(Context ctx, CharSequence value, float sp, int color, Typeface face) {
-        return text(ctx, value, sp, color, face, 0.01f);
     }
 
     private TextView text(Context ctx, CharSequence value, float sp, int color, Typeface face, float spacing) {
@@ -149,8 +209,7 @@ final class FutbolPanel {
         t.setEllipsize(TextUtils.TruncateAt.END);
         t.setIncludeFontPadding(false);
         t.setGravity(Gravity.LEFT);
-        // Over a bright video the text keeps a soft shadow, as the weather line does.
-        t.setShadowLayer(6f, 0f, 0f, 0x99000000);
+        t.setShadowLayer(4f, 0f, 1f, 0x80000000);
         t.setFocusable(false);
         t.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         return t;
@@ -163,14 +222,13 @@ final class FutbolPanel {
     private String signature(List<Futbol.Block> blocks) {
         StringBuilder b = new StringBuilder();
         for (Futbol.Block block : blocks) {
-            b.append(block.team.id).append('|');
+            b.append(block.team.id).append(block.team.name).append('|');
             for (Futbol.Match m : block.matches) {
                 b.append(m.id).append(m.state).append(m.statusName).append(m.clock)
                         .append(m.homeScore).append('-').append(m.awayScore).append(m.date).append(';');
             }
-            // The "Hoy"/"Mañana" words change at midnight.
-            b.append(java.time.LocalDate.now()).append('#');
         }
-        return b.toString();
+        // The "Hoy"/"Mañana" words change at midnight.
+        return b.append(java.time.LocalDate.now()).toString();
     }
 }

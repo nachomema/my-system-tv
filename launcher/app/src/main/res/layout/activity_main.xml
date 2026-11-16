@@ -378,19 +378,6 @@
                     android:shadowRadius="6"
                     android:visibility="gone" />
 
-                <!-- Football panel (Futbol, FutbolPanel): one column per followed team, its live match, last
-                     result and next match. In leftBlock, so it fades with the clock for the showcase. -->
-                <LinearLayout
-                    android:id="@+id/futbolPanel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginTop="22dp"
-                    android:orientation="horizontal"
-                    android:baselineAligned="false"
-                    android:focusable="false"
-                    android:importantForAccessibility="no"
-                    android:visibility="gone" />
 
             </LinearLayout>
 
@@ -411,6 +398,21 @@
                 android:fontFamily="@string/font_medium"
                 android:letterSpacing="0.04"
                 android:focusable="false"
+                android:visibility="gone" />
+
+            <!-- Football panel (Futbol, FutbolPanel): a glass card at the top right, under the round buttons, one row
+                 per followed team. In the header, so it fades out with it for all apps. -->
+            <LinearLayout
+                android:id="@+id/futbolPanel"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/topButtons"
+                android:layout_alignParentEnd="true"
+                android:layout_marginTop="22dp"
+                android:layout_marginEnd="-8dp"
+                android:orientation="vertical"
+                android:focusable="false"
+                android:importantForAccessibility="no"
                 android:visibility="gone" />
 
             <LinearLayout

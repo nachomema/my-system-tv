@@ -349,6 +349,11 @@
     <!-- Header: Wi-Fi icon before a sentence-case greeting, the day name over the date, and a weather line. -->
     <bool name="modern_header">true</bool>
     <!-- Weather line under the clock, from Open-Meteo (no key; only these coordinates are sent), every 30 minutes. -->
+    <!-- Apps whose "Continue watching" stays out of the Seguir viendo row under the dock (package names). -->
+    <string-array name="continue_watching_hidden" translatable="false">
+        <item>com.amazon.amazonvideo.livingroom</item>
+        <item>com.amazon.avod.thirdpartyclient</item>
+    </string-array>
     <bool name="weather">true</bool>
     <string name="weather_label" translatable="false">Córdoba</string>
     <string name="weather_latitude" translatable="false">-31.42</string>
